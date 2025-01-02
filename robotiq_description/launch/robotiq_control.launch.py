@@ -26,6 +26,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from launch_ros.actions import Node
+from launch.actions import ExecuteProcess
+from ament_index_python.packages import get_package_share_directory
 import launch
 from launch.substitutions import (
     Command,
@@ -66,7 +69,7 @@ def generate_launch_description():
     )
     args.append(
         launch.actions.DeclareLaunchArgument(
-            name="launch_rviz", default_value="false", description="Launch RViz?"
+            name="launch_rviz", default_value="true", description="Launch RViz?"
         )
     )
 
@@ -76,7 +79,7 @@ def generate_launch_description():
             " ",
             LaunchConfiguration("model"),
             " ",
-            "use_fake_hardware:=false",
+            "use_fake_hardware:=true",
         ]
     )
     robot_description_param = {
@@ -144,14 +147,26 @@ def generate_launch_description():
         executable="spawner",
         arguments=["robotiq_activation_controller", "-c", "/controller_manager"],
     )
+    
+    # Gazebo
+    world = os.path.join(get_package_share_directory('my_doosan_pkg'))
+    gazebo_node = ExecuteProcess(cmd=['gazebo', '--verbose','-s', 'libgazebo_ros_factory.so'], output='screen')
+ 
+    # Spawn the robot in Gazebo
+    spawn_entity_robot = Node(package     ='gazebo_ros', 
+							  executable  ='spawn_entity.py', 
+							  arguments   = ['-entity', 'my_doosan_robot', '-topic', 'robot_description'],
+							  output      ='screen')
 
     nodes = [
-        control_node,
         robot_state_publisher_node,
+        gazebo_node,
+        spawn_entity_robot,
+        rviz_node,
+        control_node,
         joint_state_broadcaster_spawner,
         robotiq_gripper_controller_spawner,
         robotiq_activation_controller_spawner,
-        rviz_node,
     ]
 
     return launch.LaunchDescription(args + nodes)

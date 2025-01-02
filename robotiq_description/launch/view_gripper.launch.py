@@ -26,6 +26,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from launch_ros.actions import Node
+from launch.actions import ExecuteProcess
+from ament_index_python.packages import get_package_share_directory
 import launch
 from launch.substitutions import (
     Command,
@@ -93,11 +96,23 @@ def generate_launch_description():
         output="screen",
         arguments=["-d", LaunchConfiguration("rvizconfig")],
     )
+    
+    # Gazebo
+    world = os.path.join(get_package_share_directory('my_doosan_pkg'))
+    gazebo_node = ExecuteProcess(cmd=['gazebo', '--verbose','-s', 'libgazebo_ros_factory.so'], output='screen')
+ 
+    # Spawn the robot in Gazebo
+    spawn_entity_robot = Node(package     ='gazebo_ros', 
+							  executable  ='spawn_entity.py', 
+							  arguments   = ['-entity', 'my_doosan_robot', '-topic', 'robot_description'],
+							  output      ='screen')
 
     nodes = [
         robot_state_publisher_node,
         joint_state_publisher_node,
         rviz_node,
+        gazebo_node,
+        spawn_entity_robot
     ]
 
     return launch.LaunchDescription(args + nodes)
